@@ -8,4 +8,6 @@ echo "deb https://repo.unipi.technology/debian ${DEBIAN_SUITE-bookworm} .${PRODU
 else
 echo "deb https://repo.unipi.technology/debian ${DEBIAN_SUITE-bookworm} ${PRODUCT}-main main"
 fi
-echo "#TEMPORARY#"
+if [ "$PRODUCT" != "zulu" ]; then
+    echo "#TEMPORARY#"
+fi

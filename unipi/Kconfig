@@ -28,6 +28,10 @@ config UNIPI1
 	bool "Unipi Unipi1"
 	select SOC_BCM
 
+config ZULU
+	bool "Unipi Zulu SBC"
+	select SOC_IMX
+
 config OEMZULU
 	bool "OEM Zulu based platform"
 	select SOC_IMX
@@ -42,6 +46,7 @@ config PRODUCT
 	default "g1" if GATE
 	default "iris" if IRIS
 	default "unipi1" if UNIPI1
+	default "zulu" if ZULU
 
 config SOC_BCM
 	bool
@@ -49,7 +54,7 @@ config SOC_BCM
 
 config SOC_IMX
 	bool
-	depends on PATRON || IRIS || OEMZULU
+	depends on PATRON || IRIS || OEMZULU || ZULU
 
 config SOC_ROCK
 	bool
@@ -74,9 +79,15 @@ config UNIPI_ESSENTIAL
 	  Install Linux kernel an bootloader (U-boot, raspi-firmware)
 	  This is required for boot image on real Unipi controller.
 
+config UNIPI_ALTBOOT
+	bool "Install Unipi altboot package"
+	default y if OEMZULU || ZULU
+	help
+	  Install Unipi altboot package
+
 config UNIPI_RECOMMENDED
 	bool "Install Unipi specific recommended packages"
-	default y if ! UNKNOWN
+	default y if ! UNKNOWN && ! ZULU
 	help
 	  Install important packages to use all Unipi hardware component.
 	    - unipi-kernel-modules for access to hw components
