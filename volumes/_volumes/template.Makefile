@@ -18,9 +18,11 @@ MOUNT_POINTS += {{volume.mount_point}}
 {% endfor %}
 
 {{build_dir}}/.mountpoints: {{tar}} {{build_dir}}/.format.yaml {{build_dir}}/.Makefile.volumes
-	mkdir -p $(patsubst %,{{build_dir}}/archive%, $(MOUNT_POINTS))
-	tar uf {{tar}} -C {{build_dir}}/archive $(patsubst %,.%, $(MOUNT_POINTS))
-	touch $@
+	@if [ -n "$(MOUNT_POINTS)" ]; then \
+	    mkdir -p $(patsubst %,{{build_dir}}/archive%, $(MOUNT_POINTS)); \
+	    tar uf {{tar}} -C {{build_dir}}/archive $(patsubst %,.%, $(MOUNT_POINTS)); \
+	fi
+	@touch $@
 
 volumes: $(VOLUME_FILES)
 
