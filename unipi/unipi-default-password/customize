@@ -13,6 +13,16 @@ set -eu
 
 TARGET=$1
 
+if test -f "$TARGET/usr/lib/systemd/system/unipicheck.path"; then
+    rm -f "$TARGET/etc/systemd/system/unipicheck.path"
+else
+    if test "${MMDEBSTRAP_MODE:-}" = chrootless; then
+        systemctl --root "$TARGET" enable unipicheck.path
+    else
+        chroot "$TARGET" systemctl enable unipicheck.path
+    fi
+fi
+
 if test "${MMDEBSTRAP_MODE:-}" = chrootless; then
     systemctl --root "$TARGET" enable unipi-default-password.service
 else

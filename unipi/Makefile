@@ -27,6 +27,7 @@ mmopt-$(CONFIG_UNIPI_REGENERATE_SSH) += --customize-hook='unipi/regenerate-ssh-k
 mmopt-$(CONFIG_UNIPI_DEFAULT_PASSWORD) += --customize-hook='mkdir -p "$$1"/usr/lib/unipi'
 mmopt-$(CONFIG_UNIPI_DEFAULT_PASSWORD) += --customize-hook='upload unipi/unipi-default-password/unipi-defpass /usr/lib/unipi/unipi-defpass'
 mmopt-$(CONFIG_UNIPI_DEFAULT_PASSWORD) += --customize-hook='upload unipi/unipi-default-password/unipi-default-password.service /etc/systemd/system/unipi-default-password.service'
+mmopt-$(CONFIG_UNIPI_DEFAULT_PASSWORD) += --customize-hook='upload unipi/unipi-default-password/unipicheck.path /etc/systemd/system/unipicheck.path'
 mmopt-$(CONFIG_UNIPI_DEFAULT_PASSWORD) +=  --customize-hook='unipi/unipi-default-password/customize'
 
 mmopt-$(CONFIG_UNIPI_RESIZE_PARTITION) += --customize-hook='mkdir -p "$$1"/usr/lib/unipi'

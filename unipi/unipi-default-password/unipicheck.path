@@ -1,0 +1,10 @@
+Unit]
+Description=Wait for /run/unipi-plc/unipi-id
+After=local-fs.target
+RequiresMountsFor=/run
+
+[Path]
+PathExists=/run/unipi-plc/unipi-id
+
+[Install]
+WantedBy=sysinit.target
