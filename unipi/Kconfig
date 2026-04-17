@@ -68,7 +68,7 @@ config PLATFORM_YAML
 	string "Define yaml file with platform boot disc parameters"
 	default "volumes/unipi_edge.yaml" if EDGE
 	default "volumes/unipi_zulu.yaml" if SOC_IMX
-	default "volumes/unipi_g1.yaml" if G1
+	default "volumes/unipi_g1.yaml" if GATE
 	default "volumes/unipi_axon.yaml" if AXON
 
 
