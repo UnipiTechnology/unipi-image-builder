@@ -114,7 +114,6 @@ config BUILD_VARIANT
 
 menuconfig UNIPI_SOURCE
 	bool "Configure Unipi platform"
-	default y
 	help
 	  Select Yes if image is for Unipi products.
 	  This add Unipi repository to apt source list to enable install

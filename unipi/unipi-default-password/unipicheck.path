@@ -1,4 +1,4 @@
-Unit]
+[Unit]
 Description=Wait for /run/unipi-plc/unipi-id
 After=local-fs.target
 RequiresMountsFor=/run
