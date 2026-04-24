@@ -20,7 +20,7 @@ chroot "$1" groupadd -r sudo || true
 chroot "$1" usermod -a -G i2c,spi,gpio,dialout,sudo ${SUDO_USERNAME} || true
 
 cat <<EOF > "$1/etc/sudoers.d/${SUDO_USERNAME}"
-${SUDO_USERNAME} ALL=(ALL) NOPASSWD: ALL
+${SUDO_USERNAME} ALL=(ALL) ALL
 EOF
 
 if [ "$SUDO_PASSWD" = "y" ]; then
