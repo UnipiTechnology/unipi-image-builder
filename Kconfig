@@ -139,6 +139,46 @@ menu "Addons"
 source "Kconfig.addons"
 endmenu
 
+menu "SBOM (Software Bill of Materials) via Trivy"
+
+config SBOM_CYCLONEDX
+	bool "CycloneDX (JSON)"
+	default n
+	help
+	  Emit <image>.cdx.json in CycloneDX 1.x JSON format.
+
+config SBOM_SPDX
+	bool "SPDX (tag-value)"
+	default n
+	help
+	  Emit <image>.spdx in SPDX tag-value format.
+
+config SBOM_SPDX_JSON
+	bool "SPDX (JSON)"
+	default n
+	help
+	  Emit <image>.spdx.json in SPDX JSON format.
+
+config SBOM_GITHUB
+	bool "GitHub dependency snapshot (JSON)"
+	default n
+	help
+	  Emit <image>.github.json in the GitHub dependency snapshot
+	  format suitable for upload to the GitHub Dependency API.
+
+config SBOM_TABLE
+	bool "Vulnerability report (human-readable table)"
+	default n
+	help
+	  Emit <image>.trivy.txt with a human-readable vulnerability
+	  table produced by 'trivy rootfs' (no SBOM, scan only).
+
+config SBOM
+	bool
+	default y if SBOM_CYCLONEDX || SBOM_SPDX || SBOM_SPDX_JSON || SBOM_GITHUB || SBOM_TABLE
+
+endmenu
+
 menu "Cleaning actions"
 
 config EXCLUDE_MAN_PAGES

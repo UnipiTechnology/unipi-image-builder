@@ -22,6 +22,7 @@ Frontend is based on Kconfig language and Makefiles and is used it like building
 - pigz, zip
 - mtools
 - qemu-system-arm
+- trivy (only when SBOM generation is enabled in `make format`)
 
 On Debian system use this commands
 
