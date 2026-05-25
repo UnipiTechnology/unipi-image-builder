@@ -1,0 +1,42 @@
+
+# Trivy-based SBOM generation. Runs 'trivy rootfs' against the extracted
+# image (SBOM_ROOTFS, provided by Makefile.common) and contributes per-format
+# outputs to SBOM_FILES + IMAGES.
+
+SBOM_TRIVY  ?= trivy
+SBOM_TRIVY_OPTS ?= --quiet --offline-scan
+
+ifeq ($(CONFIG_SBOM_CYCLONEDX),y)
+IMAGES     += $(BASEIMAGE).cdx.json
+SBOM_FILES += $(BASEIMAGE).cdx.json
+$(BASEIMAGE).cdx.json: $(SBOM_STAMP)
+	$(SBOM_TRIVY) rootfs $(SBOM_TRIVY_OPTS) --format cyclonedx --output $@ $(SBOM_ROOTFS)
+endif
+
+ifeq ($(CONFIG_SBOM_SPDX),y)
+IMAGES     += $(BASEIMAGE).spdx
+SBOM_FILES += $(BASEIMAGE).spdx
+$(BASEIMAGE).spdx: $(SBOM_STAMP)
+	$(SBOM_TRIVY) rootfs $(SBOM_TRIVY_OPTS) --format spdx --output $@ $(SBOM_ROOTFS)
+endif
+
+ifeq ($(CONFIG_SBOM_SPDX_JSON),y)
+IMAGES     += $(BASEIMAGE).spdx.json
+SBOM_FILES += $(BASEIMAGE).spdx.json
+$(BASEIMAGE).spdx.json: $(SBOM_STAMP)
+	$(SBOM_TRIVY) rootfs $(SBOM_TRIVY_OPTS) --format spdx-json --output $@ $(SBOM_ROOTFS)
+endif
+
+ifeq ($(CONFIG_SBOM_GITHUB),y)
+IMAGES     += $(BASEIMAGE).github.json
+SBOM_FILES += $(BASEIMAGE).github.json
+$(BASEIMAGE).github.json: $(SBOM_STAMP)
+	$(SBOM_TRIVY) rootfs $(SBOM_TRIVY_OPTS) --format github --output $@ $(SBOM_ROOTFS)
+endif
+
+ifeq ($(CONFIG_SBOM_TABLE),y)
+IMAGES     += $(BASEIMAGE).trivy.txt
+SBOM_FILES += $(BASEIMAGE).trivy.txt
+$(BASEIMAGE).trivy.txt: $(SBOM_STAMP)
+	$(SBOM_TRIVY) rootfs $(SBOM_TRIVY_OPTS) --format table --output $@ $(SBOM_ROOTFS)
+endif

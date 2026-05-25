@@ -139,7 +139,43 @@ menu "Addons"
 source "Kconfig.addons"
 endmenu
 
-menu "SBOM (Software Bill of Materials) via Trivy"
+menu "SBOM (Software Bill of Materials)"
+
+choice
+	prompt "SBOM generator backend"
+	default SBOM_BACKEND_NONE
+
+config SBOM_BACKEND_NONE
+	bool "Disabled (no SBOM)"
+
+config SBOM_BACKEND_TRIVY
+	bool "Trivy (aquasecurity)"
+	help
+	  Use Trivy to scan the extracted rootfs. Supports CycloneDX,
+	  SPDX tag-value, SPDX JSON, GitHub dependency snapshot and a
+	  human-readable vulnerability table. Requires the 'trivy'
+	  binary on the host.
+
+config SBOM_BACKEND_DEBSBOM
+	bool "debsbom (Siemens, Debian-native)"
+	help
+	  Use debsbom to generate SBOMs from the dpkg status of the
+	  built rootfs.
+
+	  debsbom is just a glue layer; the actual serialization is
+	  delegated to format libraries that must be present on the
+	  host:
+	    CycloneDX JSON -> python3-cyclonedx-lib   (in Debian trixie)
+	    SPDX JSON      -> python3-spdx-tools      (NOT in trixie,
+	                                               only in Debian sid
+	                                               or via pip)
+
+	  Install with:
+	    apt install debsbom python3-cyclonedx-lib
+
+endchoice
+
+if SBOM_BACKEND_TRIVY
 
 config SBOM_CYCLONEDX
 	bool "CycloneDX (JSON)"
@@ -173,9 +209,52 @@ config SBOM_TABLE
 	  Emit <image>.trivy.txt with a human-readable vulnerability
 	  table produced by 'trivy rootfs' (no SBOM, scan only).
 
+endif # SBOM_BACKEND_TRIVY
+
+if SBOM_BACKEND_DEBSBOM
+
+config SBOM_DEBSBOM_CYCLONEDX
+	bool "CycloneDX (JSON)"
+	default y
+	help
+	  Emit <image>.cdx.json in CycloneDX JSON format produced
+	  by 'debsbom generate -t cdx'.
+
+config SBOM_DEBSBOM_SPDX_JSON
+	bool "SPDX (JSON)  [needs python3-spdx-tools, not in trixie]"
+	default n
+	help
+	  Emit <image>.spdx.json in SPDX JSON format produced
+	  by 'debsbom generate -t spdx'.
+
+	  WARNING: requires python3-spdx-tools on the host, which
+	  is currently NOT packaged for Debian trixie (only sid).
+	  Either install it from sid, install via
+	  'pip install --break-system-packages spdx-tools', or use
+	  a Python venv. Without it the build will fail with
+	  "Missing dependency: spdx-tools".
+
+config SBOM_DEBSBOM_VALIDATE
+	bool "Validate generated SPDX"
+	depends on SBOM_DEBSBOM_SPDX_JSON
+	default n
+	help
+	  Pass --validate to 'debsbom generate' (SPDX only).
+
+config SBOM_DEBSBOM_WITH_LICENSES
+	bool "Include license information"
+	default y
+	help
+	  Pass --with-licenses to 'debsbom generate'. Parses the
+	  copyright files of installed packages, which slows down
+	  generation but produces a much richer SBOM.
+
+endif # SBOM_BACKEND_DEBSBOM
+
 config SBOM
 	bool
 	default y if SBOM_CYCLONEDX || SBOM_SPDX || SBOM_SPDX_JSON || SBOM_GITHUB || SBOM_TABLE
+	default y if SBOM_DEBSBOM_CYCLONEDX || SBOM_DEBSBOM_SPDX_JSON
 
 endmenu
 

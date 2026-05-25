@@ -1,0 +1,28 @@
+
+# Bundle whatever the active backend produced (SBOM_FILES) into a zip and,
+# if the SWU format is selected, also into the SWU-produced .zip.
+# Included after the backend-specific Makefile so SBOM_FILES is populated.
+
+ifneq ($(SBOM_FILES),)
+
+IMAGES += $(BASEIMAGE).sbom.zip
+$(BASEIMAGE).sbom.zip: $(SBOM_FILES)
+	@rm -rf $(BUILDDIR)/.sbom-stage
+	@mkdir -p $(BUILDDIR)/.sbom-stage/sbom
+	cp $(SBOM_FILES) $(BUILDDIR)/.sbom-stage/sbom/
+	@rm -f $@
+	cd $(BUILDDIR)/.sbom-stage && zip -r $(abspath $@) sbom
+	@rm -rf $(BUILDDIR)/.sbom-stage
+
+ifeq ($(CONFIG_IMAGE_FORMAT_SWU),y)
+IMAGES += $(BASEIMAGE).zip.sbom-stamp
+$(BASEIMAGE).zip.sbom-stamp: $(BASEIMAGE).zip $(SBOM_FILES)
+	@rm -rf $(BUILDDIR)/.sbom-stage
+	@mkdir -p $(BUILDDIR)/.sbom-stage/sbom
+	cp $(SBOM_FILES) $(BUILDDIR)/.sbom-stage/sbom/
+	cd $(BUILDDIR)/.sbom-stage && zip -r $(abspath $(BASEIMAGE).zip) sbom
+	@rm -rf $(BUILDDIR)/.sbom-stage
+	@touch $@
+endif
+
+endif

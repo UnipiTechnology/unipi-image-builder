@@ -22,7 +22,12 @@ Frontend is based on Kconfig language and Makefiles and is used it like building
 - pigz, zip
 - mtools
 - qemu-system-arm
-- trivy (only when SBOM generation is enabled in `make format`)
+- trivy (only when SBOM generation with the Trivy backend is enabled in `make menuconfig`)
+- debsbom + python3-cyclonedx-lib (only when SBOM generation with the debsbom backend is enabled in `make menuconfig`)
+  - debsbom currently supports CycloneDX out-of-the-box on Debian trixie.
+    SPDX JSON requires `python3-spdx-tools`, which is **not packaged in
+    trixie** (only in sid) — install it via pip or a venv if you need
+    SPDX, otherwise stick to CycloneDX.
 
 On Debian system use this commands
 
