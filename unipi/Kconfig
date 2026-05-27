@@ -85,9 +85,9 @@ config UNIPI_ESSENTIAL
 
 config UNIPI_ALTBOOT
 	bool "Install Unipi altboot package"
-	default y if OEMZULU || ZULU
+	default y if OEMZULU || ZULU || GATE || EDGE
 	help
-	  Install Unipi altboot package
+	  Provides "service mode".
 
 config UNIPI_RECOMMENDED
 	bool "Install Unipi specific recommended packages"
@@ -96,7 +96,6 @@ config UNIPI_RECOMMENDED
 	  Install important packages to use all Unipi hardware component.
 	    - unipi-kernel-modules for access to hw components
 	    - os-configurator to self configure OS
-	    - altboot to enable service boot mode
 	    - unipi-modbus-tools (modbus server), mbpoll (modbus client)
 
 config UNIPI_LOCALES
