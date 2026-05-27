@@ -12,13 +12,12 @@ pkgs-$(CONFIG_UNIPI_ALTBOOT) += unipi-altboot
 
 pkgs-$(CONFIG_UNIPI_RECOMMENDED) += unipi-os-configurator,unipi-os-configurator-data,unipi-altboot
 pkgs-$(CONFIG_UNIPI_RECOMMENDED) += ca-certificates,mbpoll,minicom
-pkgs-$(CONFIG_UNIPI_RECOMMENDED) += unipi-flash-diag,unipi-firmware-tools,unipi-firmware6
+pkgs-$(CONFIG_UNIPI_RECOMMENDED) += unipi-flash-diag,unipi-firmware-tools,unipi-firmware6,$(UNIPI_MODBUS)
 pkgs-$(CONFIG_UNIPI_RECOMMENDED) += $(if $(findstring y,$(CONFIG_EDGE)),unipi-firmware-52)
 ifeq ($(CONFIG_DEBIAN_SUITE), "bookworm")
-pkgs-$(CONFIG_UNIPI_RECOMMENDED) += unipi-kernel-modules,$(UNIPI_MODBUS)
+pkgs-$(CONFIG_UNIPI_RECOMMENDED) += unipi-kernel-modules
 else
 pkgs-$(CONFIG_UNIPI_RECOMMENDED) += $(if $(findstring y,$(CONFIG_UNIPI_KERNEL_MODULES)),unipi-kernel-modules)
-pkgs-$(CONFIG_UNIPI_RECOMMENDED) += $(if $(findstring y,$(CONFIG_UNIPI_KERNEL_MODULES)),unipi-modbus)
 endif
 
 mmopt-$(CONFIG_UNIPI_LOCALES) += --customize-hook='unipi/locales/customize'
