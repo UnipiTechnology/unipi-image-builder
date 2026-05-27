@@ -1,15 +1,18 @@
 #!/bin/sh
 
+DEFAULTS=/etc/default/unipi-gpp
+UNIPI_GPP=/run/unipi-plc/by-sys/gpp
+
 unipi_password_set() {
     PWD_HASH_SET=$1
-    
+
     if [ "$PWD_HASH_SET" = "legacy" ]; then
-	# shellcheck disable=SC2016 # $ is supposed to be in the hash
+        # shellcheck disable=SC2016 # $ is supposed to be in the hash
         usermod ${USER_TARGET} -p '$y$j9T$pi9lbl3bLQsb2OYu5G/7d1$7A8hVYSxM.RSbyaSbVNSvKrf2Eh3woivl2SE1gfFl79'
     else
         usermod ${USER_TARGET} -p "$PWD_HASH_SET"
     fi
-    
+
     if [ "$2" = "1" ]; then
         passwd -e ${USER_TARGET} >/dev/null
     fi
@@ -20,9 +23,9 @@ unipi_sn_check() {
     # 0 - new SN
     # 1 - invalid SN
     # 2 - old SN
-    
+
     UNIPI_SN=$1
-    
+
     case "$UNIPI_SN" in
         ''|*[!0-9]*)
             return 1
@@ -31,7 +34,7 @@ unipi_sn_check() {
             :
         ;;
     esac
-    
+
     if [ "$UNIPI_SN" -lt 0 ]; then return 1
     elif [ "$UNIPI_SN" -lt 1253800000 ]; then return 2
     elif [ "$UNIPI_SN" -lt 2000000000 ]; then return 0
@@ -41,16 +44,22 @@ unipi_sn_check() {
 }
 
 unipi_hash_set() {
-
-    GPP="/dev/mmcblk0gp0" # todo: get this from symlink
-    GPPMT="/run/unipi-plc/gpp-factory"
+    # shellcheck disable=SC1090
+    [ -r "$DEFAULTS" ] && . "$DEFAULTS"
+    if [ -z "$GPP" ] && [ -L "$UNIPI_GPP" ]; then
+        GPP=$(readlink "$UNIPI_GPP")
+    fi
+    if [ -z "$GPP" ]; then
+        GPP="/dev/mmcblk1gp0" # fallback for old Edge
+    fi
 
     if [ ! -b "$GPP" ]; then
         echo "Error: GPP does not exist."
         return 1
     fi
 
-    if ! mount -o ro,noload $GPP $GPPMT --mkdir; then
+    GPPMT="/run/unipi-plc/gpp-factory"
+    if ! mount -o ro,noload "$GPP" "$GPPMT" --mkdir; then
         echo "Error: GPP not formated."
         return 1
     fi

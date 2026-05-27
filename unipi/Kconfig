@@ -6,19 +6,23 @@ choice
 config EDGE
 	bool "Unipi Edge"
 	select SOC_BCM
+	select UNIPI_KERNEL_MODULES
 
 config NEURON
 	bool "Unipi Neuron"
 	select RPI_SOURCE
 	select SOC_BCM
+	select UNIPI_KERNEL_MODULES
 
 config PATRON
 	bool "Unipi Patron"
 	select SOC_IMX
+	select UNIPI_KERNEL_MODULES
 
 config IRIS
 	bool "Unipi Iris"
 	select SOC_IMX
+	select UNIPI_KERNEL_MODULES
 
 config GATE
 	bool "Unipi Gate"
@@ -81,9 +85,9 @@ config UNIPI_ESSENTIAL
 
 config UNIPI_ALTBOOT
 	bool "Install Unipi altboot package"
-	default y if OEMZULU || ZULU
+	default y if OEMZULU || ZULU || GATE || EDGE
 	help
-	  Install Unipi altboot package
+	  Provides "service mode".
 
 config UNIPI_RECOMMENDED
 	bool "Install Unipi specific recommended packages"
@@ -92,7 +96,6 @@ config UNIPI_RECOMMENDED
 	  Install important packages to use all Unipi hardware component.
 	    - unipi-kernel-modules for access to hw components
 	    - os-configurator to self configure OS
-	    - altboot to enable service boot mode
 	    - unipi-modbus-tools (modbus server), mbpoll (modbus client)
 
 config UNIPI_LOCALES
