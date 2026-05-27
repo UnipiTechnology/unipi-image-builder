@@ -6,19 +6,23 @@ choice
 config EDGE
 	bool "Unipi Edge"
 	select SOC_BCM
+	select UNIPI_KERNEL_MODULES
 
 config NEURON
 	bool "Unipi Neuron"
 	select RPI_SOURCE
 	select SOC_BCM
+	select UNIPI_KERNEL_MODULES
 
 config PATRON
 	bool "Unipi Patron"
 	select SOC_IMX
+	select UNIPI_KERNEL_MODULES
 
 config IRIS
 	bool "Unipi Iris"
 	select SOC_IMX
+	select UNIPI_KERNEL_MODULES
 
 config GATE
 	bool "Unipi Gate"
