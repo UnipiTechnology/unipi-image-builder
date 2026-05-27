@@ -10,7 +10,7 @@ pkgs-$(CONFIG_UNIPI_ESSENTIAL) += $(if $(findstring y,$(CONFIG_SOC_BCM)),raspi-f
 
 pkgs-$(CONFIG_UNIPI_ALTBOOT) += unipi-altboot
 
-pkgs-$(CONFIG_UNIPI_RECOMMENDED) += unipi-os-configurator,unipi-os-configurator-data,unipi-altboot
+pkgs-$(CONFIG_UNIPI_RECOMMENDED) += unipi-os-configurator,unipi-os-configurator-data
 pkgs-$(CONFIG_UNIPI_RECOMMENDED) += ca-certificates,mbpoll,minicom
 pkgs-$(CONFIG_UNIPI_RECOMMENDED) += unipi-flash-diag,unipi-firmware-tools,unipi-firmware6,$(UNIPI_MODBUS)
 pkgs-$(CONFIG_UNIPI_RECOMMENDED) += $(if $(findstring y,$(CONFIG_EDGE)),unipi-firmware-52)
