@@ -2,9 +2,15 @@
 # Trivy-based SBOM generation. Runs 'trivy rootfs' against the extracted
 # image (SBOM_ROOTFS, provided by Makefile.common) and contributes per-format
 # outputs to SBOM_FILES + IMAGES.
+#
+# --pkg-types os,library makes sure the SBOM carries both the OS (dpkg)
+# packages and the language-library packages with PURLs that match the
+# vulnerability databases used by DependencyTrack and similar tools.
+# It is Trivy's current default, but we pass it explicitly so the output
+# stays stable regardless of the host Trivy version.
 
 SBOM_TRIVY  ?= trivy
-SBOM_TRIVY_OPTS ?= --quiet --offline-scan
+SBOM_TRIVY_OPTS ?= --quiet --offline-scan --pkg-types os,library
 
 ifeq ($(CONFIG_SBOM_CYCLONEDX),y)
 IMAGES     += $(BASEIMAGE).cdx.json
