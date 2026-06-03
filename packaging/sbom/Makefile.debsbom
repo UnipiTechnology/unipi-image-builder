@@ -4,6 +4,13 @@
 # appends extensions, so we let it write to $(BASEIMAGE) and use the
 # resulting files (.cdx.json / .spdx.json) as the make targets.
 #
+# We generate into an intermediate '.full.*' SBOM and then run
+# 'debsbom filter --binaries' to drop the source-package components,
+# keeping only the binary packages. Without this, tools like
+# DependencyTrack identify the components but report no vulnerabilities,
+# because the source-package PURLs do not match the vulnerability
+# databases the way the binary-package PURLs do.
+#
 # Requires: apt install debsbom
 # Upstream: https://github.com/siemens/debsbom
 
@@ -27,10 +34,13 @@ SBOM_FILES += $(BASEIMAGE).cdx.json
 $(BASEIMAGE).cdx.json: $(SBOM_STAMP)
 	$(SBOM_DEBSBOM) generate \
 	    --root $(SBOM_ROOTFS) \
-	    --out  $(BASEIMAGE) \
+	    --out  $(BASEIMAGE).full \
 	    -t cdx \
 	    $(SBOM_DEBSBOM_DISTRO_OPTS) \
 	    $(SBOM_DEBSBOM_OPTS)
+	$(SBOM_DEBSBOM) filter --binaries -t cdx \
+	    $(BASEIMAGE).full.cdx.json $@
+	@rm -f $(BASEIMAGE).full.cdx.json
 endif
 
 ifeq ($(CONFIG_SBOM_DEBSBOM_SPDX_JSON),y)
@@ -39,9 +49,12 @@ SBOM_FILES += $(BASEIMAGE).spdx.json
 $(BASEIMAGE).spdx.json: $(SBOM_STAMP)
 	$(SBOM_DEBSBOM) generate \
 	    --root $(SBOM_ROOTFS) \
-	    --out  $(BASEIMAGE) \
+	    --out  $(BASEIMAGE).full \
 	    -t spdx \
-	    $(if $(CONFIG_SBOM_DEBSBOM_VALIDATE),--validate,) \
 	    $(SBOM_DEBSBOM_DISTRO_OPTS) \
 	    $(SBOM_DEBSBOM_OPTS)
+	$(SBOM_DEBSBOM) filter --binaries -t spdx \
+	    $(if $(CONFIG_SBOM_DEBSBOM_VALIDATE),--validate,) \
+	    $(BASEIMAGE).full.spdx.json $@
+	@rm -f $(BASEIMAGE).full.spdx.json
 endif
