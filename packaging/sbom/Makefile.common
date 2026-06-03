@@ -1,0 +1,22 @@
+
+# Shared SBOM bits: extract the built rootfs into a scratch dir and bundle
+# all generated SBOM files into a .sbom.zip (and into the SWU .zip when that
+# format is selected). Backend-specific rules (Trivy / debsbom) live in
+# Makefile.trivy / Makefile.debsbom and only contribute targets to
+# SBOM_FILES + IMAGES.
+
+SBOM_ROOTFS := $(BUILDDIR)/.sbom-rootfs
+SBOM_STAMP  := $(SBOM_ROOTFS)/.extracted
+
+$(SBOM_STAMP): $(BASEIMAGE).tar
+	@rm -rf $(SBOM_ROOTFS)
+	@mkdir -p $(SBOM_ROOTFS)
+	tar --exclude='dev/*' -xf $< -C $(SBOM_ROOTFS)
+	@touch $@
+
+SBOM_FILES :=
+
+sbom-clean:
+	@rm -rf $(SBOM_ROOTFS) $(BUILDDIR)/.sbom-stage
+
+.PHONY: sbom-clean

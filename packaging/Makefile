@@ -18,3 +18,7 @@ ifeq ($(CONFIG_IMAGE_FORMAT_RAWPART),y)
 include packaging/part/Makefile
 endif
 
+ifeq ($(CONFIG_SBOM),y)
+include packaging/sbom/Makefile
+endif
+
