@@ -53,14 +53,16 @@ unipi_hash_set() {
         GPP="/dev/mmcblk1gp0" # fallback for old Edge
     fi
 
-    if [ ! -b "$GPP" ]; then
-        echo "Error: GPP does not exist."
-        return 1
-    fi
-
-    GPPMT="/run/unipi-plc/gpp-factory"
-    if ! mount -o ro,noload "$GPP" "$GPPMT" --mkdir; then
-        echo "Error: GPP not formated."
+	if [ -b "$GPP" ]; then
+		GPPMT="/run/unipi-plc/gpp-factory"
+		if ! mount -o ro,noload "$GPP" "$GPPMT" --mkdir; then
+			echo "Error: GPP not formated."
+			return 1
+		fi
+	elif [ -d "$SDBOOT" ]; then
+		GPPMT=$SDBOOT
+	else
+        echo "Error: GPP/SDBOOT does not exist."
         return 1
     fi
 
