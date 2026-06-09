@@ -59,6 +59,7 @@ unipi_hash_set() {
 			echo "Error: GPP not formated."
 			return 1
 		fi
+		trap 'umount $GPPMT && rmdir $GPPMT' EXIT INT TERM
 	elif [ -d "$SDBOOT" ]; then
 		GPPMT=$SDBOOT
 	else
@@ -80,7 +81,6 @@ unipi_hash_set() {
     else
         echo "Error: no password for user unipi specified in image or GPP."
     fi
-    umount $GPPMT && rmdir $GPPMT
     if [ -z "$pwd" ]; then
         return 1
     fi
