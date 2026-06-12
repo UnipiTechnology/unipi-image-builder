@@ -9,7 +9,6 @@ config EDGE
 
 config NEURON
 	bool "Unipi Neuron"
-	select RPI_SOURCE
 	select SOC_BCM
 
 config PATRON
