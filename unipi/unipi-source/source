@@ -5,7 +5,7 @@
 
 if [ "$OEMZULU" = "y" ]; then
 echo "deb https://repo.unipi.technology/debian ${DEBIAN_SUITE-bookworm} .${PRODUCT}-main zulu-main main"
-elif [ "$NEURON" = "y" ]; then
+elif [ "$PRODUCT" = "neuron" ]; then
 echo "deb https://repo.unipi.technology/debian ${DEBIAN_SUITE-bookworm} ${PRODUCT}-main unimodules-main main"
 else
 echo "deb https://repo.unipi.technology/debian ${DEBIAN_SUITE-bookworm} ${PRODUCT}-main main"
