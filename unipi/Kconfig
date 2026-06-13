@@ -60,7 +60,7 @@ config SOC_ROCK
 	depends on GATE
 
 config UNIPI_32_BIT
-	bool "Select 32-bit armhf architecture" if NEURON
+	bool "Select 32-bit armhf architecture" if NEURON && DEBIAN_SUITE = "bookworm"
 	default n if EDGE || PATRON || GATE || IRIS
 
 config PLATFORM_YAML
