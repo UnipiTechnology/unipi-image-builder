@@ -18,6 +18,7 @@ config DEBIAN_SUITE_OLDSTABLE
 	bool "Use Debian oldstable release (bullseye)"
 
 config DEBIAN_SUITE_STABLE
+	depends on !EDGE
 	bool "Use Debian stable release (bookworm)"
 
 config DEBIAN_SUITE_TESTING
