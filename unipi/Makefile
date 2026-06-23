@@ -2,7 +2,7 @@ sources-$(CONFIG_UNIPI_SOURCE) += unipi/unipi-source
 export OEMZULU=$(CONFIG_OEMZULU)
 export PRODUCT=$(subst ",,$(CONFIG_PRODUCT))
 
-UNIPI_MODBUS = $(if findstring(y,$(CONFIG_DEBIAN_SUITE_OLDSTABLE)$(CONFIG_DEBIAN_SUITE_OLDOLDSTABLE)),unipi-modbus-tools,unipi-modbus)
+UNIPI_MODBUS = $(if $(findstring(y,$(CONFIG_DEBIAN_SUITE_OLDSTABLE)$(CONFIG_DEBIAN_SUITE_OLDOLDSTABLE))),unipi-modbus-tools,unipi-modbus)
 
 pkgs-$(CONFIG_UNIPI_ESSENTIAL) += unipi-u-boot,unipi-kernel,kmod,ca-certificates
 pkgs-$(CONFIG_UNIPI_ESSENTIAL) += $(if $(findstring y,$(CONFIG_SOC_BCM)),raspi-firmware)$(if $(findstring y,$(CONFIG_SOC_IMX)),firmware-misc-nonfree)
