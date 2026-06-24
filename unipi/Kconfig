@@ -69,6 +69,7 @@ config PLATFORM_YAML
 	default "volumes/unipi_zulu.yaml" if SOC_IMX
 	default "volumes/unipi_g1.yaml" if GATE
 	default "volumes/unipi_axon.yaml" if AXON
+	default "volumes/unipi_neuron.yaml" if NEURON
 
 
 config UNIPI_ESSENTIAL
