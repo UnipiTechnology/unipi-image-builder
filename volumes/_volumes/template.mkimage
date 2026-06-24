@@ -15,9 +15,11 @@
 	    set -eu;\
 	    tar x $({{volume.partition.name}}_excl) -f "{{tar}}" -C "$@.d" .{{volume.mount_point}};\
 	    if test -d $@.d/etc; then cp -r {{build_dir}}/archive/etc/* $@.d/etc; fi;\
-	    SIZE=$$(du -s -b $@.d|cut -f 1); SIZE=$$((SIZE*110/100+10000000));\
+	    # preallocate 2x content size and 256M for journal/overhead
+	    SIZE=$$(du -s -b $@.d|cut -f 1); SIZE=$$((SIZE*200/100+268435456));\
 	    truncate -s ">$$SIZE" "$@";\
 	    /sbin/mke2fs -q -F -t {{volume.fs_type}} -d "$@.d{{volume.mount_point}}" "$@";\
+	    /sbin/resize2fs -f -M "$@";\
 	    ' || rm -f "$@"
 	@rm -rf "$@.d"
 
