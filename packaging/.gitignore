@@ -1,0 +1,8 @@
+/*
+!.gitignore
+!Makefile
+!/part/
+!/raw/
+!/sbom/
+!/swu/
+!/vm/

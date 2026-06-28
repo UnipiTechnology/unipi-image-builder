@@ -45,6 +45,7 @@ export DEBIAN_SUITE=$(subst ",,$(CONFIG_DEBIAN_SUITE))
 -include volumes/Makefile
 
 %_defconfig:
+	@if ! [ -f Kconfig.format.add ]; then touch Kconfig.format.add; fi
 	kconfig-conf --defconfig=configs/$@ Kconfig
 	KCONFIG_CONFIG=.format kconfig-conf --defconfig=configs/$@ Kconfig.format
 
@@ -98,6 +99,7 @@ menuconfig: Kconfig.addons
 	@build-tools/hash_passwd.sh .config
 
 format:
+	@if ! [ -f Kconfig.format.add ]; then touch Kconfig.format.add; fi
 	@KCONFIG_CONFIG=.format kconfig-mconf Kconfig.format
 
 

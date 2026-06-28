@@ -34,15 +34,9 @@ config IMAGE_FORMAT_RAWPART
 	bool "Raw partitions in files"
 	select IMAGE_FORMAT_TAR
 
-#endchoice
+source "Kconfig.format.add"
 
-config USE_PACKAGING
-	bool
-	default y if IMAGE_FORMAT_VM
-	default y if IMAGE_FORMAT_SWU
-	default y if IMAGE_FORMAT_RAW
-	default y if IMAGE_FORMAT_RAWMINI
-	default y if IMAGE_FORMAT_RAWPART
+#endchoice
 
 config USE_VOLUMES
 	bool

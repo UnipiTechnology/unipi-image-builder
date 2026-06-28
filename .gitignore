@@ -1,5 +1,7 @@
 Makefile.addons
 Kconfig.addons
+packaging/Makefile.add
+Kconfig.format.add
 build/
 tmp/
 .config
