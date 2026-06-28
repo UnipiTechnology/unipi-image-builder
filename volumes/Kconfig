@@ -38,10 +38,15 @@ config PARTITION_USER
 
 endchoice
 
+config PARTITION_DEFAULT
+	bool
+	help
+	  To be set by user packaging
+
 config PARTITIONS_YAML
 	string
 	default "volumes/standard/parts-std.yaml" if PARTITION_STD
-	default "volumes/single-part/parts-single.yaml" if PARTITION_SINGLE
+	default "volumes/single-part/parts-single.yaml" if PARTITION_SINGLE || PARTITION_DEFAULT
 	default "volumes/ab-system/parts-dual.yaml" if PARTITION_DUAL
 	default "volumes/btrfs/parts-btr.yaml" if PARTITION_BTR
 	default "volumes/user/parts-user.yaml" if PARTITION_USER
