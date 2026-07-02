@@ -6,7 +6,10 @@ UNIPI_GPP=/run/unipi-plc/by-sys/gpp
 unipi_password_set() {
     PWD_HASH_SET=$1
 
-    if [ "$PWD_HASH_SET" = "legacy" ]; then
+    if [ "$PWD_HASH_SET" = "legacy" ] && [ -d "$SDBOOT" ]; then
+        echo "Error: no password provided for SD based platform."
+		exit 1
+    elif [ "$PWD_HASH_SET" = "legacy" ]; then
         # shellcheck disable=SC2016 # $ is supposed to be in the hash
         usermod ${USER_TARGET} -p '$y$j9T$pi9lbl3bLQsb2OYu5G/7d1$7A8hVYSxM.RSbyaSbVNSvKrf2Eh3woivl2SE1gfFl79'
     else
