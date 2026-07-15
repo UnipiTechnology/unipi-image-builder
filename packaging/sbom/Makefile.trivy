@@ -17,6 +17,34 @@ IMAGES     += $(BASEIMAGE).cdx.json
 SBOM_FILES += $(BASEIMAGE).cdx.json
 $(BASEIMAGE).cdx.json: $(SBOM_STAMP)
 	$(SBOM_TRIVY) rootfs $(SBOM_TRIVY_OPTS) --format cyclonedx --output $@ $(SBOM_ROOTFS)
+# Enrich the CycloneDX with component provenance (pedigree + CPE) from
+# the component.cdx.json files that UniPi .debs install under
+# /usr/share/doc/unipi-*/. No-op if no component SBOMs are found, so
+# this never breaks the build. Requires python3 on the SBOM host.
+	@if command -v python3 >/dev/null 2>&1; then \
+		python3 packaging/sbom/enrich-cdx.py $@ $(SBOM_ROOTFS); \
+	else \
+		echo "SBOM: python3 not found, skipping component enrichment" >&2; \
+	fi
+endif
+
+ifeq ($(CONFIG_SBOM_VEX),y)
+# CIP kernel VEX. The kernel .deb installs vex.cdx.json at
+# /usr/share/doc/unipi-kernel/vex.cdx.json (generated at kernel build
+# time from cip-kernel-sec tracking data). The image builder adapts it
+# by rewriting affects[].ref to the image SBOM's metadata.component
+# bom-ref (DT only resolves project-level refs, not per-component).
+SBOM_VEX_KERNEL ?= $(SBOM_ROOTFS)/usr/share/doc/unipi-kernel/vex.cdx.json
+
+IMAGES     += $(BASEIMAGE).vex.json
+SBOM_FILES += $(BASEIMAGE).vex.json
+$(BASEIMAGE).vex.json: $(BASEIMAGE).cdx.json $(SBOM_STAMP)
+	@if command -v python3 >/dev/null 2>&1; then \
+		python3 packaging/sbom/gen-vex.py $< $(SBOM_VEX_KERNEL) > $@; \
+	else \
+		echo "SBOM: python3 not found, skipping VEX generation" >&2; \
+		touch $@; \
+	fi
 endif
 
 ifeq ($(CONFIG_SBOM_SPDX),y)
