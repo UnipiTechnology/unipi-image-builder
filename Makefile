@@ -52,6 +52,12 @@ export DEBIAN_SUITE=$(subst ",,$(CONFIG_DEBIAN_SUITE))
 local-upload = $(shell build-tools/setup-local-upload $(local-pkgs-y))
 local-pkgs += $(patsubst %,--include=/tmp/%, $(notdir $(local-pkgs-y)))
 
+# Local .deb override: drop any .deb into local/ (gitignored) to install
+# it into the image in place of the apt version. Used to test a freshly
+# built unipi-kernel .deb (with its SBOM lineage metadata) before it is
+# published to the apt repo. No-op when local/ is empty.
+local-pkgs-y += $(wildcard local/*.deb)
+
 $(BASEIMAGE).tar: Makefile.inc .config #Makefile
 	@mkdir -p "$(BUILDDIR)"
 	@bash -c '$(patsubst %,cp % /tmp;, $(local-pkgs-y))'

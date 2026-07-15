@@ -11,3 +11,8 @@ tmp/
 rootpw
 sshkey
 __pycache__
+
+# Local .deb override directory: drop .deb files here to install them
+# into the image (overrides the apt version). See Makefile (local-pkgs-y).
+local/*.deb
+local/
