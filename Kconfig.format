@@ -117,6 +117,52 @@ config SBOM_TABLE
 	  Emit <image>.trivy.txt with a human-readable vulnerability
 	  table produced by 'trivy rootfs' (no SBOM, scan only).
 
+config SBOM_HASHES
+	bool "Per-file SHA-256 hashes (TR-03183-2 §5.2.2)"
+	default n
+	help
+	  Enrich the CycloneDX and SPDX SBOMs with the SHA-256 of every
+	  installed file per component, read from the rootfs dpkg database
+	  (Trivy does not emit component hashes). This is required by
+	  BSI TR-03183-2 §5.2.2 ("hash value of the executable component").
+
+	  CycloneDX: unipi:fileHash:sha256 properties.
+	  SPDX 2.3: files[] with SHA-256 checksums + CONTAINS relationships
+	  + filesAnalyzed/packageVerificationCode.
+
+	  Note: significantly increases SBOM size (~13x for SPDX, ~13x for
+	  CycloneDX) due to per-file granularity. Requires python3.
+
+config SBOM_VEX
+	bool "CIP kernel VEX (vulnerability exploitability exchange)"
+	default n
+	depends on SBOM_CYCLONEDX
+	help
+	  Emit a CycloneDX VEX (<image>.vex.json) for the unipi-kernel
+	  component, derived from the CIP kernel security tracker
+	  (cip-kernel-sec). Marks kernel CVEs already fixed (resolved) or
+	  not-applicable (not_affected) on the CIP SLTS branch so consumers
+	  (e.g. DependencyTrack) suppress them, leaving only genuinely open
+	  kernel CVEs visible via the component's linux_kernel CPE.
+
+	  Requires the YAML output of cip-kernel-sec's report_affected.py
+	  for the target CIP branch, run with the exact built tag so the
+	  classification matches the shipped kernel, e.g.:
+	    report_affected.py --output-format yaml -o affected.yaml \
+	        --branch cip/6.12:v6.12.94-cip26
+	  Set SBOM_VEX_REPORT to that file's path (env or .config).
+	  Requires python3 + PyYAML (python3-yaml).
+
+config SBOM_VEX_REPORT
+	string "report_affected.py --output-format yaml output path"
+	depends on SBOM_VEX
+	help
+	  Filesystem path to the YAML produced by
+	  `scripts/report_affected.py --output-format yaml -o <file>
+	  --branch <cip-branch>:<tag>` from a cip-kernel-sec checkout.
+	  CVEs in the `affected` bucket are treated as OPEN (not VEXed);
+	  `fixed` -> resolved; `ignored` -> not_affected.
+
 endif # SBOM_BACKEND_TRIVY
 
 if SBOM_BACKEND_DEBSBOM

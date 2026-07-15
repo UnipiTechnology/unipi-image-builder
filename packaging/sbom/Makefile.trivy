@@ -26,6 +26,40 @@ $(BASEIMAGE).cdx.json: $(SBOM_STAMP)
 	else \
 		echo "SBOM: python3 not found, skipping unipi-kernel lineage enrichment" >&2; \
 	fi
+# Per-file SHA-256 hashes (TR-03183-2 §5.2.2). Adds unipi:fileHash:sha256
+# properties per installed file. Significantly increases SBOM size.
+ifeq ($(CONFIG_SBOM_HASHES),y)
+	@if command -v python3 >/dev/null 2>&1; then \
+		python3 packaging/sbom/enrich-hashes.py $@ $(SBOM_ROOTFS); \
+	else \
+		echo "SBOM: python3 not found, skipping hash enrichment" >&2; \
+	fi
+endif
+endif
+
+ifeq ($(CONFIG_SBOM_VEX),y)
+# CIP kernel VEX. Requires the YAML output of cip-kernel-sec's
+# report_affected.py for the target CIP branch (with the exact built tag),
+# e.g.:
+#   report_affected.py --output-format yaml -o affected.yaml \
+#       --branch cip/6.12:v6.12.94-cip26
+# Override via the environment or .config:
+#   SBOM_VEX_REPORT - path to that YAML file
+SBOM_VEX_REPORT ?= $(CONFIG_SBOM_VEX_REPORT)
+
+ifneq ($(SBOM_VEX_REPORT),)
+IMAGES     += $(BASEIMAGE).vex.json
+SBOM_FILES += $(BASEIMAGE).vex.json
+$(BASEIMAGE).vex.json: $(BASEIMAGE).cdx.json $(SBOM_STAMP)
+	@if command -v python3 >/dev/null 2>&1; then \
+		python3 packaging/sbom/gen-vex.py $< $(SBOM_ROOTFS) \
+			$(SBOM_VEX_REPORT) > $@; \
+	else \
+		echo "SBOM: python3 not found, skipping VEX generation" >&2; \
+	fi
+else
+$(error SBOM_VEX enabled but SBOM_VEX_REPORT not set (path to report_affected.py --output-format yaml output))
+endif
 endif
 
 ifeq ($(CONFIG_SBOM_SPDX),y)
@@ -40,6 +74,16 @@ IMAGES     += $(BASEIMAGE).spdx.json
 SBOM_FILES += $(BASEIMAGE).spdx.json
 $(BASEIMAGE).spdx.json: $(SBOM_STAMP)
 	$(SBOM_TRIVY) rootfs $(SBOM_TRIVY_OPTS) --format spdx-json --output $@ $(SBOM_ROOTFS)
+# Per-file SHA-256 hashes (TR-03183-2 §5.2.2). Adds files[] with SHA-256
+# checksums + CONTAINS relationships + filesAnalyzed/packageVerificationCode.
+# Significantly increases SBOM size.
+ifeq ($(CONFIG_SBOM_HASHES),y)
+	@if command -v python3 >/dev/null 2>&1; then \
+		python3 packaging/sbom/enrich-hashes.py $@ $(SBOM_ROOTFS); \
+	else \
+		echo "SBOM: python3 not found, skipping hash enrichment" >&2; \
+	fi
+endif
 endif
 
 ifeq ($(CONFIG_SBOM_GITHUB),y)
