@@ -17,6 +17,15 @@ IMAGES     += $(BASEIMAGE).cdx.json
 SBOM_FILES += $(BASEIMAGE).cdx.json
 $(BASEIMAGE).cdx.json: $(SBOM_STAMP)
 	$(SBOM_TRIVY) rootfs $(SBOM_TRIVY_OPTS) --format cyclonedx --output $@ $(SBOM_ROOTFS)
+# Enrich the CycloneDX with unipi-kernel fork lineage (pedigree + cpe)
+# from the upstream-metadata.json the kernel .deb installs. No-op if the
+# metadata file is absent (older deb / non-kernel image), so this never
+# breaks the build. Requires python3 on the SBOM host.
+	@if command -v python3 >/dev/null 2>&1; then \
+		python3 packaging/sbom/enrich-cdx.py $@ $(SBOM_ROOTFS); \
+	else \
+		echo "SBOM: python3 not found, skipping unipi-kernel lineage enrichment" >&2; \
+	fi
 endif
 
 ifeq ($(CONFIG_SBOM_SPDX),y)
