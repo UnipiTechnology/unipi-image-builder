@@ -1,0 +1,15 @@
+platform:
+        name: "neuron"
+        mmcdev: "/dev/mmcblk0"
+        start_sector: 2048
+        label: dos
+        boot_partition: &firmware
+            name: "firmware"
+            type: 'BIOS boot'
+            size: 128M
+
+        boot_volume:
+            partition: *firmware
+            fs_type: vfat
+            mount_point: /boot/firmware
+            automount: 1

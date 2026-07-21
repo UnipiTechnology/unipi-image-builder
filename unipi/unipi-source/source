@@ -2,13 +2,15 @@
 
 #if [ "$DEBIAN_SUITE" = "trixie" ] ; then unset DEBIAN_SUITE ; fi
 
+DEFAULT_SUITE=trixie
+
 
 if [ "$OEMZULU" = "y" ]; then
-echo "deb https://repo.unipi.technology/debian ${DEBIAN_SUITE-bookworm} .${PRODUCT}-main zulu-main main"
+echo "deb https://repo.unipi.technology/debian ${DEBIAN_SUITE-$DEFAULT_SUITE} .${PRODUCT}-main zulu-main main"
 elif [ "$PRODUCT" = "neuron" ]; then
-echo "deb https://repo.unipi.technology/debian ${DEBIAN_SUITE-bookworm} ${PRODUCT}-main unimodules-main main"
+echo "deb https://repo.unipi.technology/debian ${DEBIAN_SUITE-$DEFAULT_SUITE} ${PRODUCT}-main unimodules-main main"
 else
-echo "deb https://repo.unipi.technology/debian ${DEBIAN_SUITE-bookworm} ${PRODUCT}-main main"
+echo "deb https://repo.unipi.technology/debian ${DEBIAN_SUITE-$DEFAULT_SUITE} ${PRODUCT}-main main"
 fi
 if [ "$PRODUCT" != "zulu" ]; then
     echo "#TEMPORARY#"
