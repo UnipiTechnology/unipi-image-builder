@@ -15,14 +15,13 @@ config DEBIAN_SUITE_OLDOLDSTABLE
 
 config DEBIAN_SUITE_OLDSTABLE
 	depends on !EDGE
-	bool "Use Debian oldstable release (bullseye)"
+	bool "Use Debian oldstable release (bookworm)"
 
 config DEBIAN_SUITE_STABLE
-	depends on !EDGE
-	bool "Use Debian stable release (bookworm)"
+	bool "Use Debian stable release (trixie)"
 
 config DEBIAN_SUITE_TESTING
-	bool "Use Debian testing release (trixie)"
+	bool "Use Debian testing release (forky)"
 
 config DEBIAN_SUITE_OTHER
 	bool "Use othe specified release"
@@ -32,9 +31,9 @@ endchoice
 config DEBIAN_SUITE
 	string
 	prompt "Choose Debian release" if DEBIAN_SUITE_OTHER
-	default "bullseye" if DEBIAN_SUITE_OLDSTABLE
-	default "bookworm" if DEBIAN_SUITE_STABLE
-	default "trixie" if DEBIAN_SUITE_TESTING
+	default "bookworm" if DEBIAN_SUITE_OLDSTABLE
+	default "trixie" if DEBIAN_SUITE_STABLE
+	default "forky" if DEBIAN_SUITE_TESTING
 	help
 	  Use some codename of Debian release which will  in apt source list.
 
