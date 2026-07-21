@@ -147,7 +147,7 @@ config UNIPI_FWUPDATE
 	default n
 
 config UNIPI_EVOK
-	bool "Install Evok server" if ! EDGE && ! GATE
+	bool "Install Evok server" if ! GATE
 	default n
 
 config UNIPI_HAVEGED
