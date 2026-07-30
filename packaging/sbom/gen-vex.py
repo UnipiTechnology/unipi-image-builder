@@ -1,147 +1,69 @@
 #!/usr/bin/env python3
-# Generate a CycloneDX VEX (Vulnerability Exploitability eXchange) for the
-# unipi-kernel component, from the output of cip-kernel-sec's
-# report_affected.py (https://gitlab.com/cip-project/cip-kernel/cip-kernel-sec).
+# Adapt a kernel-generated CycloneDX VEX for upload to an image-level
+# Dependency-Track project.
 #
-# Purpose: the SBOM's unipi-kernel component carries a
-# cpe:2.3:o:linux:linux_kernel:<ver> so DependencyTrack's NVD analyzer
-# matches it against Linux kernel CVEs. NVD does not know which CVEs the
-# CIP SLTS branch has already backported or ignored. This VEX marks those
-# CVEs as resolved / not_affected so DT suppresses them, leaving only
-# genuinely open kernel CVEs visible.
+# The kernel repo generates a standalone VEX (debian/scripts/gen-vex)
+# that points affects[].ref at the kernel's own purl. DependencyTrack's
+# VEX importer does not resolve per-component bom-refs (DT #5260) — it
+# only resolves the project's metadata.component bom-ref. This script
+# rewrites all affects[].ref entries to the image SBOM's
+# metadata.component bom-ref so DT actually applies the suppressions.
 #
-# Input: the YAML output of
-#   report_affected.py --output-format yaml -o <file> --branch cip/12:<tag>
-# which classifies every tracked kernel CVE for the branch into three
-# buckets:
-#     affected -> open      (NOT VEXed; DT surfaces via CPE)
-#     fixed    -> resolved  (VEXed: resolved, will_not_fix)
-#     ignored  -> not_affected (VEXed: not_affected)
-# Pass the branch with the exact built tag, e.g. `cip/6.12:v6.12.94-cip26`,
-# so the classification matches the kernel actually shipped (not the branch
-# tip).
+# Usage: gen-vex.py <image-sbom.cdx.json> <kernel-vex.cdx.json>
+#   <image-sbom.cdx.json>  the (enriched) image CycloneDX SBOM
+#   <kernel-vex.cdx.json>  the kernel's standalone VEX
 #
-# Usage: gen-vex.py <cdx.json> <sbom-rootfs> <report.yaml>
-#   <cdx.json>     the (enriched) CycloneDX SBOM, for the component ref + timestamp
-#   <sbom-rootfs>  extracted rootfs (reserved; currently unused)
-#   <report.yaml>  report_affected.py --output-format yaml output
-#
-# Output: CycloneDX VEX JSON on stdout. Requires python3 + PyYAML.
-# If unipi-kernel is absent from the SBOM, an empty VEX is emitted (no-op).
-#
-# NB on affects[].ref: DependencyTrack's VEX importer resolves the ref against
-# the project's metadata.component bom-ref, but does NOT resolve per-component
-# bom-refs (it doesn't persist component bom-refs, so purl-shaped refs are
-# "not resolvable" and silently skipped — see DependencyTrack #5260). We
-# therefore point affects[].ref at the SBOM's metadata.component (project)
-# bom-ref, which scopes the analysis to the whole project. This is the same
-# pattern used by the working example in DependencyTrack discussion #1921.
+# Output: adapted CycloneDX VEX JSON on stdout.
+# If the image SBOM has no unipi-kernel component, an empty VEX is emitted.
 
 import json
-import os
 import sys
 
 
-def load_report(path):
-    """Parse report_affected.py yaml output -> (affected, fixed, ignored) sets.
-
-    The yaml is `{branch_full_name: {affected: [...], fixed: [...], ignored: [...]}}`.
-    We take the first (only) branch entry.
-    """
-    try:
-        import yaml  # type: ignore
-    except ImportError:
-        sys.exit("gen-vex: PyYAML required (python3-yaml) to parse "
-                 "report_affected.py output")
-    with open(path) as f:
-        data = yaml.safe_load(f)
-    if not data:
-        return set(), set(), set()
-    branch = next(iter(data.values()))
-    to_set = lambda key: {c.upper() for c in (branch.get(key) or [])}
-    return to_set("affected"), to_set("fixed"), to_set("ignored")
-
-
-def component_ref(cdx):
-    """bom-ref to scope VEX analyses to.
-
-    DependencyTrack resolves the project's metadata.component bom-ref, not
-    per-component bom-refs (those are not persisted and yield 'Unable to locate
-    affected element'). Use the project bom-ref so suppressions actually apply.
-    We still require a unipi-kernel component to exist (otherwise the image
-    has no kernel to VEX) but point affects at the project, not the component.
-    """
-    has_kernel = any(c.get("name") == "unipi-kernel"
-                     for c in cdx.get("components", []))
-    if not has_kernel:
-        return None
-    return cdx.get("metadata", {}).get("component", {}).get("bom-ref")
-
-
 def main():
-    if len(sys.argv) != 4:
-        sys.exit("usage: gen-vex.py <cdx.json> <sbom-rootfs> <report.yaml>")
-    cdx_path, _rootfs, report_path = sys.argv[1:4]
+    if len(sys.argv) != 3:
+        sys.exit("usage: gen-vex.py <image-sbom.cdx.json> <kernel-vex.cdx.json>")
+    sbom_path, vex_path = sys.argv[1:3]
 
-    with open(cdx_path) as f:
-        cdx = json.load(f)
+    with open(sbom_path) as f:
+        sbom = json.load(f)
+    with open(vex_path) as f:
+        vex = json.load(f)
 
-    ref = component_ref(cdx)
-    if ref is None:
-        json.dump(_empty_vex(cdx), sys.stdout, indent=2)
+    has_kernel = any(c.get("name") == "unipi-kernel"
+                     for c in sbom.get("components", []))
+    if not has_kernel:
+        json.dump(_empty_vex(sbom), sys.stdout, indent=2)
         print()
         return
 
-    affected, fixed, ignored = load_report(report_path)
+    project_ref = sbom.get("metadata", {}).get("component", {}).get("bom-ref", "")
+    if not project_ref:
+        sys.exit("gen-vex: image SBOM has no metadata.component bom-ref")
 
-    vulns = []
-    for cve in sorted(fixed):
-        vulns.append(_entry(cve, ref, state="resolved",
-                           detail="Fixed (backported) on the CIP SLTS branch "
-                                  "per cip-kernel-sec; no action required."))
-    for cve in sorted(ignored):
-        vulns.append(_entry(cve, ref, state="not_affected",
-                           detail="Marked not-applicable/ignored on the CIP "
-                                  "SLTS branch per cip-kernel-sec."))
+    # Rewrite all affects[].ref to the image project's bom-ref
+    for vuln in vex.get("vulnerabilities", []):
+        for affect in vuln.get("affects", []):
+            affect["ref"] = project_ref
 
-    vex = _empty_vex(cdx)
-    vex["vulnerabilities"] = vulns
-    vex["metadata"]["tools"] = {
-        "components": [{
-            "type": "application",
-            "name": "cip-kernel-sec",
-            "externalReferences": [{
-                "type": "website",
-                "url": "https://gitlab.com/cip-project/cip-kernel/cip-kernel-sec",
-            }],
-        }]
+    # Update metadata to reflect the image project, not the kernel
+    md = sbom.get("metadata", {})
+    vex["metadata"]["component"] = {
+        "type": md.get("component", {}).get("type", "application"),
+        "bom-ref": project_ref,
+        "name": md.get("component", {}).get("name", ""),
     }
+
     json.dump(vex, sys.stdout, indent=2)
     print()
 
 
-def _entry(cve, ref, state, detail):
-    return {
-        "id": cve,
-        "source": {
-            "name": "NVD",
-            "url": f"https://nvd.nist.gov/vuln/detail/{cve}",
-        },
-        "analysis": {
-            "state": state,
-            "response": ["will_not_fix"],
-            "detail": detail,
-        },
-        "affects": [{"ref": ref}],
-    }
-
-
-def _empty_vex(cdx):
-    md = cdx.get("metadata", {})
+def _empty_vex(sbom):
+    md = sbom.get("metadata", {})
     comp = md.get("component", {})
     return {
         "bomFormat": "CycloneDX",
-        "specVersion": "1.5",
+        "specVersion": "1.6",
         "version": 1,
         "metadata": {
             "timestamp": md.get("timestamp", ""),

@@ -17,14 +17,15 @@ IMAGES     += $(BASEIMAGE).cdx.json
 SBOM_FILES += $(BASEIMAGE).cdx.json
 $(BASEIMAGE).cdx.json: $(SBOM_STAMP)
 	$(SBOM_TRIVY) rootfs $(SBOM_TRIVY_OPTS) --format cyclonedx --output $@ $(SBOM_ROOTFS)
-# Enrich the CycloneDX with unipi-kernel fork lineage (pedigree + cpe)
-# from the upstream-metadata.json the kernel .deb installs. No-op if the
-# metadata file is absent (older deb / non-kernel image), so this never
-# breaks the build. Requires python3 on the SBOM host.
+	@jq '.specVersion = "1.6"' $@ > $@.tmp && mv $@.tmp $@
+# Enrich the CycloneDX with component provenance (pedigree + CPE) from
+# the component.cdx.json files that UniPi .debs install under
+# /usr/share/doc/unipi-*/. No-op if no component SBOMs are found, so
+# this never breaks the build. Requires python3 on the SBOM host.
 	@if command -v python3 >/dev/null 2>&1; then \
 		python3 packaging/sbom/enrich-cdx.py $@ $(SBOM_ROOTFS); \
 	else \
-		echo "SBOM: python3 not found, skipping unipi-kernel lineage enrichment" >&2; \
+		echo "SBOM: python3 not found, skipping component enrichment" >&2; \
 	fi
 # Per-file SHA-256 hashes (TR-03183-2 §5.2.2). Adds unipi:fileHash:sha256
 # properties per installed file. Significantly increases SBOM size.
@@ -38,28 +39,25 @@ endif
 endif
 
 ifeq ($(CONFIG_SBOM_VEX),y)
-# CIP kernel VEX. Requires the YAML output of cip-kernel-sec's
-# report_affected.py for the target CIP branch (with the exact built tag),
-# e.g.:
-#   report_affected.py --output-format yaml -o affected.yaml \
-#       --branch cip/6.12:v6.12.94-cip26
-# Override via the environment or .config:
-#   SBOM_VEX_REPORT - path to that YAML file
-SBOM_VEX_REPORT ?= $(CONFIG_SBOM_VEX_REPORT)
+# CIP kernel VEX. The kernel .deb installs vex.cdx.json at
+# /usr/share/doc/unipi-kernel/vex.cdx.json (generated at kernel build
+# time from cip-kernel-sec tracking data). The image builder adapts it
+# by rewriting affects[].ref to the image SBOM's metadata.component
+# bom-ref (DT only resolves project-level refs, not per-component).
+SBOM_VEX_KERNEL ?= $(SBOM_ROOTFS)/usr/share/doc/unipi-kernel/vex.cdx.json
 
-ifneq ($(SBOM_VEX_REPORT),)
 IMAGES     += $(BASEIMAGE).vex.json
 SBOM_FILES += $(BASEIMAGE).vex.json
 $(BASEIMAGE).vex.json: $(BASEIMAGE).cdx.json $(SBOM_STAMP)
 	@if command -v python3 >/dev/null 2>&1; then \
-		python3 packaging/sbom/gen-vex.py $< $(SBOM_ROOTFS) \
-			$(SBOM_VEX_REPORT) > $@; \
+		if [ -f "$(SBOM_VEX_KERNEL)" ]; then \
+			python3 packaging/sbom/gen-vex.py $< $(SBOM_VEX_KERNEL) > $@; \
+		else \
+			echo "SBOM: kernel VEX not found at $(SBOM_VEX_KERNEL), skipping" >&2; \
+		fi; \
 	else \
 		echo "SBOM: python3 not found, skipping VEX generation" >&2; \
 	fi
-else
-$(error SBOM_VEX enabled but SBOM_VEX_REPORT not set (path to report_affected.py --output-format yaml output))
-endif
 endif
 
 ifeq ($(CONFIG_SBOM_SPDX),y)

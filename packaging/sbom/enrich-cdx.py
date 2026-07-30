@@ -36,7 +36,6 @@ import os
 import re
 import sys
 
-META_PATH = "usr/share/doc/unipi-kernel/upstream-metadata.json"
 
 # Origin tagging: distinguish UniPi-owned components from Debian ones so
 # downstream tooling can select the ~14 UniPi components for per-package
@@ -200,25 +199,57 @@ def main():
 
     cdx_path = sys.argv[1]
     rootfs = sys.argv[2]
-    meta_path = os.path.join(rootfs, META_PATH)
 
     with open(cdx_path) as f:
         cdx = json.load(f)
 
-    # Kernel-specific enrichment (CPE, pedigree) needs the upstream metadata
-    # the unipi-kernel .deb installs. If absent (older deb / non-kernel
-    # image) the kernel block is skipped — but origin tagging below still
-    # runs, independent of metadata.
-    meta = None
-    if os.path.exists(meta_path):
-        with open(meta_path) as f:
-            meta = json.load(f)
-
-    if meta is not None:
-        components = cdx.get("components", [])
-        comp = next((c for c in components if c.get("name") == "unipi-kernel"), None)
-        if comp is not None:
-            enrich_kernel(comp, meta)
+    # Component-specific enrichment from CycloneDX component SBOMs that
+    # .debs install at /usr/share/doc/<pkg>/component.cdx.json.
+    # Discovery is by file presence — any package that ships a
+    # component.cdx.json is enriched, not just unipi-* prefixed ones.
+    # For each component SBOM:
+    #   - Match the primary component by bom-ref (trivy) or name
+    #     in the image SBOM and merge CPE/pedigree into it.
+    #   - Add any additional components (e.g. venv dependencies) that
+    #     don't already exist, deduplicated by bom-ref.
+    META_DIR = os.path.join(rootfs, "usr/share/doc")
+    if os.path.isdir(META_DIR):
+        for pkg_dir_name in sorted(os.listdir(META_DIR)):
+            meta_path = os.path.join(META_DIR, pkg_dir_name, "component.cdx.json")
+            if not os.path.exists(meta_path):
+                continue
+            with open(meta_path) as f:
+                meta = json.load(f)
+            if not isinstance(meta, dict) or meta.get("bomFormat") != "CycloneDX":
+                continue
+            existing_refs = {c.get("bom-ref") for c in cdx.get("components", [])}
+            for src_comp in meta.get("components", []):
+                src_ref = src_comp.get("bom-ref")
+                existing = None
+                if src_ref and src_ref in existing_refs:
+                    existing = next(c for c in cdx.get("components", []) if c.get("bom-ref") == src_ref)
+                else:
+                    comp_name = src_comp.get("name", "")
+                    if comp_name:
+                        existing = next((c for c in cdx.get("components", []) if c.get("name") == comp_name), None)
+                if existing is not None:
+                    enrich_component(existing, src_comp)
+                elif src_ref and src_ref not in existing_refs:
+                    cdx.setdefault("components", []).append(src_comp)
+                    existing_refs.add(src_ref)
+            # Merge dependency edges from the component SBOM. For edges
+            # whose ref already exists in the image SBOM, union the
+            # dependsOn lists (trivy's deb->deb edges + component SBOM's
+            # pip edges). For new edges, add them.
+            dep_index: dict[str, set[str]] = {}
+            for d in cdx.get("dependencies", []):
+                dep_index.setdefault(d.get("ref", ""), set()).update(d.get("dependsOn", []))
+            for src_dep in meta.get("dependencies", []):
+                src_dep_ref = src_dep.get("ref", "")
+                if src_dep_ref in existing_refs:
+                    dep_index.setdefault(src_dep_ref, set()).update(src_dep.get("dependsOn", []))
+            cdx["dependencies"] = [{"ref": ref, "dependsOn": sorted(deps)}
+                                   for ref, deps in dep_index.items()]
 
     # Tag every component with its origin (unipi vs debian) so downstream
     # tooling can select the UniPi-owned subset, and set `supplier` on the
@@ -257,30 +288,80 @@ def main():
         json.dump(cdx, f, indent=2)
 
 
-def enrich_kernel(comp, meta):
-    """Inject CPE, pedigree, and advisory refs into the unipi-kernel comp."""
-    # CPE: match against NVD's linux_kernel product, using the base
-    # Linux version (strip the CIP suffix) so NVD affected ranges apply.
-    base_ver = ""
-    for a in meta.get("ancestors", []):
-        if a.get("name") == "linux":
-            base_ver = a.get("version", "")
-            break
-    if base_ver:
-        comp["cpe"] = f"cpe:2.3:o:linux:linux_kernel:{base_ver}:*:*:*:*:*:*:*"
+def enrich_component(comp, src):
+    """Inject CPE, pedigree, and advisory refs into an image-SBOM
+    component from a provenance source. The source can be:
+      - A flat upstream-metadata.json dict (custom format): has
+        top-level cpe, ancestors, patches, build_commit, notes
+      - A CycloneDX component object (from component.cdx.json): has
+        top-level cpe, and ancestors/patches/commits/notes under
+        pedigree
+    Both shapes are normalized to the flat form before applying."""
+    # Normalize: if the source is a CycloneDX component (has pedigree),
+    # extract the flat fields from it.
+    if "pedigree" in src:
+        ped = src["pedigree"]
+        meta = {
+            "cpe": src.get("cpe", ""),
+            "ancestors": ped.get("ancestors", []),
+            "patches": ped.get("patches", []),
+            "build_commit": (ped.get("commits", [{}])[0].get("uid", "") if ped.get("commits") else ""),
+            "notes": ped.get("notes", ""),
+        }
+        # Ancestors in CycloneDX already have type/purl/externalReferences;
+        # convert to the flat format (repository/homepage strings).
+        flat_ancestors = []
+        for a in meta["ancestors"]:
+            fa = {"name": a["name"], "version": a["version"]}
+            if a.get("purl"):
+                fa["purl"] = a["purl"]
+            for ref in a.get("externalReferences", []):
+                if ref.get("type") == "vcs":
+                    fa["repository"] = ref["url"]
+                elif ref.get("type") == "website":
+                    fa["homepage"] = ref["url"]
+                elif ref.get("type") == "distribution":
+                    fa["repository"] = ref["url"]
+            flat_ancestors.append(fa)
+        meta["ancestors"] = flat_ancestors
+        # Patches in CycloneDX are [{"type": "unofficial"}, ...] — convert
+        # to a count-based list for the notes, then re-expand below.
+        if isinstance(meta["patches"], list) and meta["patches"] and isinstance(meta["patches"][0], dict):
+            # Already in CycloneDX patch format; keep as-is for the
+            # comp.pedigree.patches assignment, but extract count for notes.
+            meta["_cdx_patches"] = meta["patches"]
+            meta["patches"] = []
+    else:
+        meta = src
+
+    # CPE: use the source's cpe field if present, otherwise derive
+    # from the linux ancestor version (kernel).
+    cpe = meta.get("cpe", "")
+    if not cpe:
+        for a in meta.get("ancestors", []):
+            if a.get("name") == "linux":
+                base_ver = a.get("version", "")
+                if base_ver:
+                    cpe = f"cpe:2.3:o:linux:linux_kernel:{base_ver}:*:*:*:*:*:*:*"
+                break
+    if cpe:
+        comp["cpe"] = cpe
 
     # Pedigree.ancestors: CycloneDX Component objects (need a `type`);
-    # convert the metadata `repository` string into an externalReferences
-    # entry, which is the CycloneDX-native shape.
+    # convert the flat metadata's repository/homepage strings into
+    # externalReferences entries.
     ancestors = []
     for a in meta.get("ancestors", []):
         anc = {"type": "library", "name": a["name"], "version": a["version"]}
         if a.get("purl"):
             anc["purl"] = a["purl"]
+        extrefs = []
         if a.get("repository"):
-            anc["externalReferences"] = [
-                {"type": "vcs", "url": a["repository"]}
-            ]
+            extrefs.append({"type": "vcs", "url": a["repository"]})
+        if a.get("homepage"):
+            extrefs.append({"type": "website", "url": a["homepage"]})
+        if extrefs:
+            anc["externalReferences"] = extrefs
         ancestors.append(anc)
 
     pedigree = {"ancestors": ancestors}
@@ -290,18 +371,26 @@ def enrich_kernel(comp, meta):
     if commit:
         pedigree["commits"] = [{"uid": commit}]
 
-    # Patchset -> pedigree.patches (type only; we deliberately do not
-    # embed the private fork URL — patch names carry the intent).
-    patches = meta.get("patches", [])
-    if patches:
-        pedigree["patches"] = [{"type": "unofficial"} for _ in patches]
-        pedigree["notes"] = (
-            "Fork of the CIP SLTS kernel with a minimal hardware-enablement "
-            "patchset for UniPi boards. Patches (applied in order): "
-            + ", ".join(patches)
-            + ". Security advisories for this lineage are tracked by the CIP "
-            "kernel security project, not by Debian's linux source package."
-        )
+    # Patchset -> pedigree.patches. The kernel's flat metadata has a
+    # list of patch names; u-boot has a dict with sub-project keys.
+    # A CycloneDX source already has [{"type": "unofficial"}, ...].
+    if meta.get("_cdx_patches"):
+        pedigree["patches"] = meta["_cdx_patches"]
+    else:
+        raw_patches = meta.get("patches", [])
+        if isinstance(raw_patches, dict):
+            all_patches = []
+            for sub_patches in raw_patches.values():
+                all_patches.extend(sub_patches)
+        else:
+            all_patches = raw_patches
+        if all_patches:
+            pedigree["patches"] = [{"type": "unofficial"} for _ in all_patches]
+
+    # Notes: use the source's notes field if present, else generate.
+    notes = meta.get("notes", "")
+    if notes:
+        pedigree["notes"] = notes
 
     comp["pedigree"] = pedigree
 
