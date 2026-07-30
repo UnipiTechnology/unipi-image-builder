@@ -6,14 +6,24 @@
 # @author Unipi Technology <info@unipi.technology>
 # @date 2024-10-07
 
-# This is mmdebstrap customize hook that add conditional
-# starting to getty.
-# Getty becomes dependend on framebuffer
-
+# This is mmdebstrap customize hook that gates
+# getty on framebuffer creation events.
+# Solves problems with hotplug not working after booting 
+# without connected screen.
 set -eu
 
 mkdir -p "$1/etc/systemd/system/getty@tty1.service.d"
 cat <<EOF > "$1/etc/systemd/system/getty@tty1.service.d/override.conf"
 [Unit]
-ConditionPathExists=/dev/fb0
+Requires=/dev/fb0
+After=/dev/fb0
+
+[Install]
+WantedBy=
+WantedBy=dev-fb0.device
+EOF
+
+mkdir -p "$1/etc/udev/rules.d"
+cat <<EOF > "$1/etc/udev/rules.d/99-systemd-fb0.rules"
+SUBSYSTEM=="graphics", KERNEL=="fb0", TAG+="systemd"
 EOF
