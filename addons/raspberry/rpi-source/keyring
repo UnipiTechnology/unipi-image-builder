@@ -1,5 +1,18 @@
 #!/bin/sh
 
 set -eu
-curl -s https://archive.raspberrypi.org/debian/raspberrypi.gpg.key
 
+# Fetch the Raspberry Pi archive keyring and emit it as an ASCII-armored
+# PGP PUBLIC KEY BLOCK (the format expected by build-tools/source-prepare.sh
+# and matching the other *-source addons).
+#
+# Upstream ships a binary .gpg keyring; we re-armor it. A throwaway GNUPGHOME
+# isolates the import so only this key is exported (no host keyring pollution).
+# This key carries SHA-512 self-signatures (the older archive.raspberrypi.org
+# key used SHA-1, which Debian Trixie's apt/sqv rejects).
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+chmod 700 "$tmp"
+curl -fsS https://raw.githubusercontent.com/raspberrypi/rpi-image-gen/master/keydir/raspberrypi-archive-keyring.gpg \
+  | gpg --batch --homedir "$tmp" --import 2>/dev/null
+gpg --batch --homedir "$tmp" --armor --export 2>/dev/null
