@@ -117,6 +117,21 @@ config SBOM_TABLE
 	  Emit <image>.trivy.txt with a human-readable vulnerability
 	  table produced by 'trivy rootfs' (no SBOM, scan only).
 
+config SBOM_VEX
+	bool "CIP kernel VEX (vulnerability exploitability exchange)"
+	default n
+	depends on SBOM_CYCLONEDX
+	help
+	  Emit a CycloneDX VEX (<image>.vex.json) for the unipi-kernel
+	  component. Consumes the standalone VEX the kernel .deb ships at
+	  /usr/share/doc/unipi-kernel/vex.cdx.json (generated at kernel
+	  build time from cip-kernel-sec) and adapts it with
+	  packaging/sbom/gen-vex.py, rewriting affects[].ref to the image
+	  SBOM's metadata.component bom-ref so DependencyTrack (whose VEX
+	  importer only resolves project-level refs) applies the
+	  suppressions. Only genuinely open kernel CVEs remain visible via
+	  the component's linux_kernel CPE.
+
 endif # SBOM_BACKEND_TRIVY
 
 if SBOM_BACKEND_DEBSBOM
